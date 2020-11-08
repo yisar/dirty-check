@@ -1,7 +1,7 @@
-// Largely inspried by https://github.com/localvoid/ivi/blob/master/packages/ivi/src/core/observable.ts
-
 let clock = 1
 let deps = null
+let depsMap = new Map()
+const effectStack = []
 const DIRTY_CHECK_TOKEN = Object.freeze({})
 
 export function currentClock() {
@@ -12,45 +12,39 @@ export function advanceClock() {
   clock++
 }
 
-export const observable = (v) => ({ t: currentClock(), v })
+export const reactive = (v) => {
+  let value = { t: currentClock(), v }
+  return (n) => (n ? set(value, n) : get(value))
+}
 
 export function apply(v, fn) {
   v.t = currentClock()
   v.v = fn(v.v)
 }
 
-export function assign(v, n) {
+export function set(v, n) {
   v.t = currentClock()
   v.v = n
+  const deps = depsMap.get(v)
+  console.log(deps)
+  deps.forEach((d) => d())
 }
 
-export const mut = (v) => ((v.t = currentClock()), v.v)
-
-export const signal = () => observable(null)
-
-export function emit(s) {
-  s.t = currentClock()
-}
-
-export function watch(v) {
-  if (deps === null) {
-    deps = [currentClock(), v]
-  } else {
-    deps.push(v)
+export function get(v) {
+  const e = effectStack[effectStack.length - 1]
+  let deps = depsMap.get(v)
+  if (!deps) {
+    deps = new Set([currentClock])
+    depsMap.set(v, deps)
+  }
+  if (!deps.has(e)) {
+    deps.add(e)
   }
   return typeof v === 'function' ? v : v.v
 }
 
-export function save() {
-  const res = deps
-  deps = null
-  return res
-}
-export function restore(deps) {
-  deps = deps
-}
 export function check(deps) {
-  const t = deps[0]
+  const t = deps[0]()
   for (let i = 1; i < deps.length; i++) {
     const v = deps[i]
     if (typeof v === 'object') {
@@ -104,4 +98,16 @@ export function selector(fn) {
     }
     return token === DIRTY_CHECK_TOKEN ? lastUpdate > time : value
   }
+}
+
+export function autorun(fn) {
+  const effect = function (...args) {
+    try {
+      effectStack.push(effect)
+      return fn(args)
+    } finally {
+      effectStack.pop()
+    }
+  }
+  return effect()
 }
