@@ -7,11 +7,16 @@
   </head>
   <body>
     <script type="module">
-      import { reactive, computed, autorun } from './index.js'
+      import { reactive, computed, invalidate } from './index.js'
       const count = reactive(0)
-      autorun(() => console.log(count()))
+      const double = computed(() => {
+        return count() * 2
+      })
+      count(1)
+      // console.log(double())
       count(2)
-      count(3)
+      invalidate()
+      console.log(double())
     </script>
   </body>
 </html>

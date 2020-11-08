@@ -11,7 +11,9 @@ export function advanceClock() {
 
 export const reactive = (v) => {
   let value = { t: clock(), v }
-  return (n) => (n ? set(value, n) : get(value))
+  return (n) => {
+    return n ? set(value, n) : get(value)
+  }
 }
 
 export function restore(deps) {
@@ -21,9 +23,7 @@ export function restore(deps) {
 export function set(v, n) {
   v.t = clock()
   v.v = n
-  const deps = depsMap.get(v)
-  console.log(deps)
-  deps.forEach((d) => d())
+  return v.v
 }
 
 export function get(v) {
@@ -36,6 +36,7 @@ export function get(v) {
 }
 
 export function dirtyCheck(deps) {
+  if (deps == null) return true
   const t = deps[0]
   for (let i = 1; i < deps.length; i++) {
     const v = deps[i]
@@ -65,7 +66,7 @@ export function computed(fn) {
     const now = clock()
     if (lastdirtyCheck < now) {
       lastdirtyCheck = now
-      if (deps === null || dirtyCheck(deps) === true) {
+      if (dirtyCheck(deps) === true) {
         const prevDeps = save()
         const nextValue = fn(value)
         deps = save()
@@ -95,5 +96,20 @@ export function selector(fn) {
       }
     }
     return token ? lastUpdate > time : value
+  }
+}
+
+const defer =
+  typeof Promise === 'function'
+    ? function (cb) {
+        Promise.resolve().then(cb)
+      }
+    : setTimeout
+
+export function invalidate(render) {
+  try {
+    defer(render)
+  } finally {
+    advanceClock()
   }
 }
