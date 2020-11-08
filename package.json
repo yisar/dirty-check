@@ -1,6 +1,6 @@
 {
-  "name": "dirty-checking",
-  "version": "1.0.0",
+  "name": "dirty-check",
+  "version": "0.0.0",
   "description": "reactivity system with dirty checking",
   "main": "index.js",
   "scripts": {

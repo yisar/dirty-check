@@ -9,7 +9,7 @@ export function advanceClock() {
   count++
 }
 
-export const reactive = (v) => {
+export const ref = (v) => {
   let value = { t: clock(), v }
   return (n) => {
     return n ? set(value, n) : get(value)
