@@ -1,9 +1,10 @@
+// Largely inspried by https://github.com/localvoid/ivi/blob/master/packages/ivi/src/core/observable.ts
+
 let clock = 1
 let deps = null
-
 const DIRTY_CHECK_TOKEN = Object.freeze({})
 
-export function clock() {
+export function currentClock() {
   return clock
 }
 
@@ -11,50 +12,44 @@ export function advanceClock() {
   clock++
 }
 
-export const observable = (v) => ({ t: clock(), v })
+export const observable = (v) => ({ t: currentClock(), v })
 
 export function apply(v, fn) {
-  v.t = clock()
+  v.t = currentClock()
   v.v = fn(v.v)
 }
 
 export function assign(v, n) {
-  v.t = clock()
+  v.t = currentClock()
   v.v = n
 }
 
-export const mut = (v) => ((v.t = clock()), v.v)
+export const mut = (v) => ((v.t = currentClock()), v.v)
 
 export const signal = () => observable(null)
 
 export function emit(s) {
-  s.t = clock()
+  s.t = currentClock()
 }
-let watchEnabled = 0
-export function enableWatch() {
-  watchEnabled++
-}
-export function disableWatch() {
-  watchEnabled--
-}
+
 export function watch(v) {
   if (deps === null) {
-    deps = [clock(), v]
+    deps = [currentClock(), v]
   } else {
     deps.push(v)
   }
   return typeof v === 'function' ? v : v.v
 }
 
-export function saveObservableDependencies() {
-  const deps = deps
+export function save() {
+  const res = deps
   deps = null
-  return deps
+  return res
 }
-export function restoreObservableDependencies(deps) {
+export function restore(deps) {
   deps = deps
 }
-export function dirtyCheckWatchList(deps) {
+export function check(deps) {
   const t = deps[0]
   for (let i = 1; i < deps.length; i++) {
     const v = deps[i]
@@ -75,14 +70,14 @@ export function computed(fn) {
   let value = void 0
   let deps = null
   return (token, time) => {
-    const now = clock()
+    const now = currentClock()
     if (lastCheck < now) {
       lastCheck = now
-      if (deps === null || dirtyCheckWatchList(deps) === true) {
-        const prevDeps = saveObservableDependencies()
+      if (deps === null || check(deps) === true) {
+        const prevDeps = save()
         const nextValue = fn(value)
-        deps = saveObservableDependencies()
-        restoreObservableDependencies(prevDeps)
+        deps = save()
+        restore(prevDeps)
         if (value !== nextValue) {
           value = nextValue
           lastUpdate = now
@@ -98,7 +93,7 @@ export function selector(fn) {
   let lastUpdate = 0
   let value = void 0
   return (token, time) => {
-    const now = clock()
+    const now = currentClock()
     if (lastCheck < now) {
       lastCheck = now
       const nextValue = fn(value)

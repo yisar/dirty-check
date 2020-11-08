@@ -1,0 +1,24 @@
+{
+  "name": "dirty-checking",
+  "version": "1.0.0",
+  "description": "reactivity system with dirty checking",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "serve ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yisar/dirty-checking.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yisar/dirty-checking/issues"
+  },
+  "homepage": "https://github.com/yisar/dirty-checking#readme",
+  "devDependencies": {
+    "serve": "^11.3.2"
+  }
+}
