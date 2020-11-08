@@ -1,29 +1,25 @@
-let clock = 1
-let deps = null
-let depsMap = new Map()
-const effectStack = []
-const DIRTY_CHECK_TOKEN = Object.freeze({})
+let count = 1
+let activeDeps = null
 
-export function currentClock() {
-  return clock
+export function clock() {
+  return count
 }
 
 export function advanceClock() {
-  clock++
+  count++
 }
 
 export const reactive = (v) => {
-  let value = { t: currentClock(), v }
+  let value = { t: clock(), v }
   return (n) => (n ? set(value, n) : get(value))
 }
 
-export function apply(v, fn) {
-  v.t = currentClock()
-  v.v = fn(v.v)
+export function restore(deps) {
+  activeDeps = deps
 }
 
 export function set(v, n) {
-  v.t = currentClock()
+  v.t = clock()
   v.v = n
   const deps = depsMap.get(v)
   console.log(deps)
@@ -31,43 +27,45 @@ export function set(v, n) {
 }
 
 export function get(v) {
-  const e = effectStack[effectStack.length - 1]
-  let deps = depsMap.get(v)
-  if (!deps) {
-    deps = new Set([currentClock])
-    depsMap.set(v, deps)
-  }
-  if (!deps.has(e)) {
-    deps.add(e)
+  if (activeDeps === null) {
+    activeDeps = [clock(), v]
+  } else {
+    activeDeps.push(v)
   }
   return typeof v === 'function' ? v : v.v
 }
 
-export function check(deps) {
-  const t = deps[0]()
+export function dirtyCheck(deps) {
+  const t = deps[0]
   for (let i = 1; i < deps.length; i++) {
     const v = deps[i]
     if (typeof v === 'object') {
       if (v.t > t) {
         return true
       }
-    } else if (v(DIRTY_CHECK_TOKEN, t) === true) {
+    } else if (v(true, t) === true) {
       return true
     }
   }
   return false
 }
 
+export function save() {
+  const deps = activeDeps
+  activeDeps = null
+  return deps
+}
+
 export function computed(fn) {
-  let lastCheck = 0
+  let lastdirtyCheck = 0
   let lastUpdate = 0
   let value = void 0
   let deps = null
   return (token, time) => {
-    const now = currentClock()
-    if (lastCheck < now) {
-      lastCheck = now
-      if (deps === null || check(deps) === true) {
+    const now = clock()
+    if (lastdirtyCheck < now) {
+      lastdirtyCheck = now
+      if (deps === null || dirtyCheck(deps) === true) {
         const prevDeps = save()
         const nextValue = fn(value)
         deps = save()
@@ -78,36 +76,24 @@ export function computed(fn) {
         }
       }
     }
-    return token === DIRTY_CHECK_TOKEN ? lastUpdate > time : value
+    return token ? lastUpdate > time : value
   }
 }
 
 export function selector(fn) {
-  let lastCheck = 0
+  let lastdirtyCheck = 0
   let lastUpdate = 0
   let value = void 0
-  return (token, time) => {
-    const now = currentClock()
-    if (lastCheck < now) {
-      lastCheck = now
+  return () => {
+    const now = clock()
+    if (lastdirtyCheck < now) {
+      lastdirtyCheck = now
       const nextValue = fn(value)
       if (value !== nextValue) {
         value = nextValue
         lastUpdate = now
       }
     }
-    return token === DIRTY_CHECK_TOKEN ? lastUpdate > time : value
+    return token ? lastUpdate > time : value
   }
-}
-
-export function autorun(fn) {
-  const effect = function (...args) {
-    try {
-      effectStack.push(effect)
-      return fn(args)
-    } finally {
-      effectStack.pop()
-    }
-  }
-  return effect()
 }
