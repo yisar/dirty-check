@@ -50,24 +50,29 @@ const stateLessComponent = () => <button onClick={() => invalidate()}>{count()}<
 ```html
 <script>
   let count = 0
+  let double = count * 2
+
   function handleClick() {
     count++
   }
 </script>
 
-<button @click={handleClick}>{count}</button>
+<button @click={handleClick}>{double}</button>
 ```
 
 大约编译成这个样子：
 
-```jsx
-let count = ref(0)
+```html
+<script>
+  let count = ref(0)
+  let double = computed(() => count() * 2)
 
-function handleClick() {
-  count(count() + 1)
-}
+  function handleClick() {
+    count(count() + 1)
+  }
+</script>
 
-<button onClick={handleClick}>{computed(() => count())}</button>
+<button onclick=handleClick()>double()</button>
 ```
 
 不需要改变语义，不需要任何语法糖，runtime 也非常轻量
